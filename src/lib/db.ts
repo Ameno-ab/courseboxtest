@@ -17,7 +17,7 @@ const globalWithMongo = globalThis as GlobalWithMongo;
 
 function getClient(): MongoClient {
   if (!globalWithMongo._mongoClient) {
-    const mongoUri = process.env.MONGODB_URI;
+    const mongoUri = process.env.MONGODB_URI?.trim();
 
     if (!mongoUri) {
       throw new Error(
@@ -39,7 +39,7 @@ export async function getDb(): Promise<Db> {
 
   const connectedClient = await globalWithMongo._mongoClientPromise;
 
-  return connectedClient.db(process.env.MONGODB_DB ?? "coursebox_prototype");
+  return connectedClient.db(process.env.MONGODB_DB?.trim() || "coursebox_prototype");
 }
 
 export async function closeDb(): Promise<void> {
