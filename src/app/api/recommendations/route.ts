@@ -4,6 +4,8 @@ import type { Candidate, Course, Enrollment, Recommendation } from "@/lib/types"
 import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const candidateId = request.nextUrl.searchParams.get("candidateId");
 
@@ -41,12 +43,15 @@ export async function GET(request: NextRequest) {
     .filter((recommendation) => recommendation.score > 0)
     .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 
-  return NextResponse.json({
-    candidate: {
-      id: String(candidate._id),
-      name: candidate.name,
-      skills: candidate.skills,
+  return NextResponse.json(
+    {
+      candidate: {
+        id: String(candidate._id),
+        name: candidate.name,
+        skills: candidate.skills,
+      },
+      recommendations,
     },
-    recommendations,
-  });
+    { headers: { "cache-control": "no-store" } },
+  );
 }

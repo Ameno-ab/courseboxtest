@@ -10,10 +10,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:ensure-indexes": "tsx --env-file-if-exists=.env.local scripts/ensure-indexes.ts",
-    "db:seed": "tsx --env-file-if-exists=.env.local scripts/seed-demo.ts",
-    "cli:import-courses": "tsx --env-file-if-exists=.env.local scripts/import-courses.ts",
-    "cli:upsert-skills": "tsx --env-file-if-exists=.env.local scripts/upsert-skills.ts"
+    "db:ensure-indexes": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/ensure-indexes.ts",
+    "db:seed": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-demo.ts",
+    "cli:import-courses": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/import-courses.ts",
+    "cli:upsert-skills": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/upsert-skills.ts"
   },
   "dependencies": {
     "jose": "^6.2.3",

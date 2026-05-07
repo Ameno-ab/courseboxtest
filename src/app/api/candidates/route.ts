@@ -1,6 +1,8 @@
 import { getDb } from "@/lib/db";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const db = await getDb();
   const candidates = await db
@@ -9,12 +11,15 @@ export async function GET() {
     .sort({ name: 1 })
     .toArray();
 
-  return NextResponse.json({
-    candidates: candidates.map((candidate) => ({
-      id: String(candidate._id),
-      name: candidate.name,
-      email: candidate.email,
-      skills: candidate.skills ?? [],
-    })),
-  });
+  return NextResponse.json(
+    {
+      candidates: candidates.map((candidate) => ({
+        id: String(candidate._id),
+        name: candidate.name,
+        email: candidate.email,
+        skills: candidate.skills ?? [],
+      })),
+    },
+    { headers: { "cache-control": "no-store" } },
+  );
 }
