@@ -1,0 +1,38 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/coursebox_prototype
+      - MONGODB_DB=coursebox_prototype
+      - ZAPIER_WEBHOOK_SECRET=local-zapier-secret
+      - COURSEBOX_EMBED_BASE_URL=https://example.coursebox.ai/course
+      - LTI_PLATFORM_ISSUER=http://localhost:3000
+      - LTI_TOOL_CLIENT_ID=
+      - LTI_DEPLOYMENT_ID=
+      - LTI_TARGET_LINK_URI=http://localhost:3000
+      - COURSEBOX_LTI_LAUNCH_URL=
+      - LTI_KEY_ID=
+      - LTI_PLATFORM_PRIVATE_KEY_PEM=
+      - LTI_PLATFORM_PUBLIC_JWKS={"keys":[]}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

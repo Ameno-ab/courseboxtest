@@ -1,0 +1,109 @@
+import { getDb } from "@/lib/db";
+import { createLtiLaunchToken, getLtiConfig } from "@/lib/lti";
+import type { Candidate, Course } from "@/lib/types";
+import { ObjectId } from "mongodb";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const launchSchema = z.object({
+  candidateId: z.string().min(1),
+});
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ courseId: string }> },
+) {
+  const { courseId } = await context.params;
+
+  if (!ObjectId.isValid(courseId)) {
+    return NextResponse.json({ error: "Invalid courseId." }, { status: 400 });
+  }
+
+  const body = launchSchema.safeParse(await request.json());
+
+  if (!body.success || !ObjectId.isValid(body.data.candidateId)) {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  const db = await getDb();
+
+  const course = (await db
+    .collection("courses")
+    .findOne({ _id: new ObjectId(courseId) })) as Course | null;
+
+  const candidate = (await db
+    .collection("candidates")
+    .findOne({ _id: new ObjectId(body.data.candidateId) })) as Candidate | null;
+
+  if (!course || !candidate) {
+    return NextResponse.json(
+      { error: "Candidate or course not found." },
+      { status: 404 },
+    );
+  }
+
+  const now = new Date();
+
+  await db.collection("enrollments").updateOne(
+    { candidateId: new ObjectId(body.data.candidateId), courseId: new ObjectId(courseId) },
+    {
+      $set: {
+        status: "in_progress",
+        externalCourseId: course.externalId,
+        source: "lti",
+        updatedAt: now,
+      },
+      $setOnInsert: {
+        candidateId: new ObjectId(body.data.candidateId),
+        courseId: new ObjectId(courseId),
+        createdAt: now,
+      },
+    },
+    { upsert: true },
+  );
+
+  const ltiConfig = getLtiConfig();
+  const canLaunchLti =
+    !!ltiConfig.launchUrl &&
+    !!ltiConfig.clientId &&
+    !!ltiConfig.privateKeyPem &&
+    !!ltiConfig.platformIssuer &&
+    !!ltiConfig.targetLinkUri;
+
+  if (canLaunchLti && ltiConfig.launchUrl) {
+    const nonce = crypto.randomUUID();
+    const idToken = await createLtiLaunchToken({
+      userId: String(candidate._id),
+      userEmail: candidate.email,
+      userName: candidate.name,
+      courseExternalId: course.externalId,
+      nonce,
+    });
+
+    return NextResponse.json({
+      mode: "lti_form_post",
+      launchUrl: ltiConfig.launchUrl,
+      fields: {
+        id_token: idToken,
+        state: nonce,
+      },
+    });
+  }
+
+  const embedBaseUrl = process.env.COURSEBOX_EMBED_BASE_URL;
+
+  if (!embedBaseUrl) {
+    return NextResponse.json(
+      {
+        error:
+          "No launch configuration found. Configure LTI env vars or COURSEBOX_EMBED_BASE_URL.",
+      },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json({
+    mode: "direct_url",
+    launchUrl: `${embedBaseUrl.replace(/\/$/, "")}/${course.externalId}`,
+  });
+}

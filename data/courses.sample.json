@@ -1,0 +1,22 @@
+[
+  {
+    "externalId": "cbx-sales-101",
+    "title": "Sales Foundations",
+    "description": "Build core consultative sales skills.",
+    "skills": ["sales", "communication", "negotiation"],
+    "metadata": {
+      "durationMinutes": 90,
+      "level": "beginner"
+    }
+  },
+  {
+    "externalId": "cbx-safe-201",
+    "title": "Workplace Safety Essentials",
+    "description": "Learn baseline safety and compliance expectations.",
+    "skills": ["safety", "compliance", "incident response"],
+    "metadata": {
+      "durationMinutes": 60,
+      "level": "beginner"
+    }
+  }
+]
