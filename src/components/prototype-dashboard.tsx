@@ -98,23 +98,9 @@ export default function PrototypeDashboard({
         return;
       }
 
-      if (payload.mode === "lti_form_post" && payload.launchUrl) {
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = payload.launchUrl;
-        form.target = "_blank";
-
-        Object.entries(payload.fields).forEach(([key, value]) => {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = key;
-          input.value = String(value);
-          form.appendChild(input);
-        });
-
-        document.body.appendChild(form);
-        form.submit();
-        form.remove();
+      if (payload.mode === "lti_init" && payload.redirectUrl) {
+        window.open(payload.redirectUrl, "_blank", "noopener,noreferrer");
+        return;
       }
     } catch (launchError) {
       setError(launchError instanceof Error ? launchError.message : "Unknown launch error");

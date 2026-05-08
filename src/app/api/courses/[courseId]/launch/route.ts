@@ -1,9 +1,12 @@
 import { getDb } from "@/lib/db";
-import { createLtiLaunchToken, getLtiConfig } from "@/lib/lti";
+import { buildOidcInitiateLoginUrl, isLtiConfigured } from "@/lib/lti";
+import { createLoginSession } from "@/lib/lti-session";
 import type { Candidate, Course } from "@/lib/types";
 import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+
+export const dynamic = "force-dynamic";
 
 const launchSchema = z.object({
   candidateId: z.string().min(1),
@@ -62,32 +65,19 @@ export async function POST(
     { upsert: true },
   );
 
-  const ltiConfig = getLtiConfig();
-  const canLaunchLti =
-    !!ltiConfig.launchUrl &&
-    !!ltiConfig.clientId &&
-    !!ltiConfig.privateKeyPem &&
-    !!ltiConfig.platformIssuer &&
-    !!ltiConfig.targetLinkUri;
-
-  if (canLaunchLti && ltiConfig.launchUrl) {
-    const nonce = crypto.randomUUID();
-    const idToken = await createLtiLaunchToken({
+  if (isLtiConfigured()) {
+    const loginHint = await createLoginSession({
       userId: String(candidate._id),
       userEmail: candidate.email,
       userName: candidate.name,
       courseExternalId: course.externalId,
-      nonce,
     });
+    const redirectUrl = buildOidcInitiateLoginUrl({ loginHint });
 
-    return NextResponse.json({
-      mode: "lti_form_post",
-      launchUrl: ltiConfig.launchUrl,
-      fields: {
-        id_token: idToken,
-        state: nonce,
-      },
-    });
+    return NextResponse.json(
+      { mode: "lti_init", redirectUrl },
+      { headers: { "cache-control": "no-store" } },
+    );
   }
 
   const embedBaseUrl = process.env.COURSEBOX_EMBED_BASE_URL;

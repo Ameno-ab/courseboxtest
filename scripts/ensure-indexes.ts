@@ -26,6 +26,11 @@ async function run() {
     { key: { processedAt: -1 } },
   ]);
 
+  await db.collection("ltiLoginSessions").createIndexes([
+    { key: { loginHint: 1 }, unique: true },
+    { key: { createdAt: 1 }, expireAfterSeconds: 600 },
+  ]);
+
   console.log("Indexes ensured successfully.");
 }
 

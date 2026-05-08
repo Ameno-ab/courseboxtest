@@ -7,6 +7,7 @@ type LtiLaunchTokenInput = {
   userName: string;
   courseExternalId: string;
   nonce: string;
+  targetLinkUri?: string;
 };
 
 const alg = "RS256";
@@ -29,10 +30,43 @@ export function getLtiConfig() {
     deploymentId: readEnv("LTI_DEPLOYMENT_ID"),
     targetLinkUri: readEnv("LTI_TARGET_LINK_URI"),
     launchUrl: readEnv("COURSEBOX_LTI_LAUNCH_URL"),
+    initiateLoginUrl: readEnv("COURSEBOX_LTI_INITIATE_LOGIN_URL"),
     keyId: readEnv("LTI_KEY_ID"),
     privateKeyPem: readPem("LTI_PLATFORM_PRIVATE_KEY_PEM"),
     jwksJson: readEnv("LTI_PLATFORM_PUBLIC_JWKS"),
   };
+}
+
+export function isLtiConfigured(): boolean {
+  const c = getLtiConfig();
+  return Boolean(
+    c.platformIssuer &&
+      c.clientId &&
+      c.deploymentId &&
+      c.targetLinkUri &&
+      c.launchUrl &&
+      c.initiateLoginUrl &&
+      c.keyId &&
+      c.privateKeyPem,
+  );
+}
+
+export function buildOidcInitiateLoginUrl(input: {
+  loginHint: string;
+}): string {
+  const config = getLtiConfig();
+  if (!config.initiateLoginUrl || !config.platformIssuer || !config.clientId || !config.deploymentId || !config.targetLinkUri) {
+    throw new Error("LTI not fully configured.");
+  }
+
+  const url = new URL(config.initiateLoginUrl);
+  url.searchParams.set("iss", config.platformIssuer);
+  url.searchParams.set("login_hint", input.loginHint);
+  url.searchParams.set("target_link_uri", config.targetLinkUri);
+  url.searchParams.set("client_id", config.clientId);
+  url.searchParams.set("lti_deployment_id", config.deploymentId);
+  url.searchParams.set("lti_message_hint", "LtiResourceLinkRequest");
+  return url.toString();
 }
 
 export async function createLtiLaunchToken(input: LtiLaunchTokenInput): Promise<string> {
@@ -51,12 +85,13 @@ export async function createLtiLaunchToken(input: LtiLaunchTokenInput): Promise<
 
   const privateKey = await importPKCS8(config.privateKeyPem, alg);
   const now = Math.floor(Date.now() / 1000);
+  const targetLinkUri = input.targetLinkUri ?? config.targetLinkUri;
 
   return await new SignJWT({
     "https://purl.imsglobal.org/spec/lti/claim/message_type": "LtiResourceLinkRequest",
     "https://purl.imsglobal.org/spec/lti/claim/version": "1.3.0",
     "https://purl.imsglobal.org/spec/lti/claim/deployment_id": config.deploymentId,
-    "https://purl.imsglobal.org/spec/lti/claim/target_link_uri": config.targetLinkUri,
+    "https://purl.imsglobal.org/spec/lti/claim/target_link_uri": targetLinkUri,
     "https://purl.imsglobal.org/spec/lti/claim/resource_link": {
       id: input.courseExternalId,
       title: input.courseExternalId,
