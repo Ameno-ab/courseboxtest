@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type Candidate = {
   id: string;
   name: string;
   email: string;
-  skills: string[];
+  missingSkills: string[];
 };
 
 type Recommendation = {
@@ -15,8 +14,8 @@ type Recommendation = {
   externalId: string;
   title: string;
   description?: string;
-  matchedSkills: string[];
-  missingSkills: string[];
+  addressedSkills: string[];
+  remainingSkills: string[];
   score: number;
   enrollmentStatus: "not_started" | "suggested" | "in_progress" | "completed";
 };
@@ -25,7 +24,7 @@ type RecommendationResponse = {
   candidate: {
     id: string;
     name: string;
-    skills: string[];
+    missingSkills: string[];
   };
   recommendations: Recommendation[];
 };
@@ -190,22 +189,14 @@ export default function PrototypeDashboard({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 md:px-10">
-      <section className="flex flex-wrap items-start justify-between gap-4 rounded-3xl border border-amber-200/50 bg-linear-to-r from-amber-50 via-white to-sky-50 p-6 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-            Coursebox Skill-Match Prototype
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
-            Pick a candidate, generate skill-based recommendations, then launch a course
-            using LTI or direct fallback while tracking completion updates via Zapier.
-          </p>
-        </div>
-        <Link
-          href="/courses"
-          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-        >
-          Manage courses
-        </Link>
+      <section className="rounded-3xl border border-amber-200/50 bg-linear-to-r from-amber-50 via-white to-sky-50 p-6 shadow-sm">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+          Skill-Match
+        </h1>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
+          Pick a candidate to see which courses cover their missing skills, then launch
+          one straight into Coursebox.
+        </p>
       </section>
 
       <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-[1fr_auto] md:items-end">
@@ -227,7 +218,10 @@ export default function PrototypeDashboard({
           </select>
           {selectedCandidate ? (
             <p className="mt-2 text-xs text-slate-500">
-              Skills: {selectedCandidate.skills.length ? selectedCandidate.skills.join(", ") : "none"}
+              Missing skills:{" "}
+              {selectedCandidate.missingSkills.length
+                ? selectedCandidate.missingSkills.join(", ")
+                : "none"}
             </p>
           ) : null}
         </div>
@@ -269,21 +263,21 @@ export default function PrototypeDashboard({
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Matched Skills
+                    Closes these gaps
                   </h3>
                   <p className="mt-1 text-sm text-slate-700">
-                    {recommendation.matchedSkills.length
-                      ? recommendation.matchedSkills.join(", ")
+                    {recommendation.addressedSkills.length
+                      ? recommendation.addressedSkills.join(", ")
                       : "None"}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Missing Skills
+                    Still missing after
                   </h3>
                   <p className="mt-1 text-sm text-slate-700">
-                    {recommendation.missingSkills.length
-                      ? recommendation.missingSkills.join(", ")
+                    {recommendation.remainingSkills.length
+                      ? recommendation.remainingSkills.join(", ")
                       : "None"}
                   </p>
                 </div>

@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       candidate: {
         id: String(candidate._id),
         name: candidate.name,
-        skills: candidate.skills,
+        missingSkills: candidate.missingSkills,
       },
       recommendations,
     },

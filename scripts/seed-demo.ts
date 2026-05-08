@@ -33,14 +33,14 @@ async function run() {
     {
       name: "Alice Candidate",
       email: "alice@example.com",
-      skills: ["communication", "sales", "crm"],
+      missingSkills: ["sales", "crm", "negotiation"],
       createdAt: now,
       updatedAt: now,
     },
     {
       name: "Ben Candidate",
       email: "ben@example.com",
-      skills: ["safety", "compliance", "risk"],
+      missingSkills: ["safety", "compliance", "incident response"],
       createdAt: now,
       updatedAt: now,
     },

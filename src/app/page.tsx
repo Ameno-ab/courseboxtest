@@ -8,20 +8,18 @@ export default async function Home() {
 
   const candidates = await db
     .collection("candidates")
-    .find({}, { projection: { name: 1, email: 1, skills: 1 } })
+    .find({}, { projection: { name: 1, email: 1, missingSkills: 1 } })
     .sort({ name: 1 })
     .toArray();
 
   return (
-    <main className="min-h-screen w-full">
-      <PrototypeDashboard
-        candidates={candidates.map((candidate) => ({
-          id: String(candidate._id),
-          name: candidate.name,
-          email: candidate.email,
-          skills: candidate.skills ?? [],
-        }))}
-      />
-    </main>
+    <PrototypeDashboard
+      candidates={candidates.map((candidate) => ({
+        id: String(candidate._id),
+        name: candidate.name,
+        email: candidate.email,
+        missingSkills: candidate.missingSkills ?? [],
+      }))}
+    />
   );
 }

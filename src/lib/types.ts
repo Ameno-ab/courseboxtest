@@ -25,7 +25,7 @@ export type Candidate = {
   _id?: ObjectId;
   name: string;
   email: string;
-  skills: string[];
+  missingSkills: string[];
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -61,8 +61,8 @@ export type Recommendation = {
   externalId: string;
   title: string;
   description?: string;
-  matchedSkills: string[];
-  missingSkills: string[];
+  addressedSkills: string[];
+  remainingSkills: string[];
   score: number;
   enrollmentStatus: EnrollmentStatus | "not_started";
 };

@@ -1,14 +1,18 @@
 import type { Candidate, Course, Recommendation } from "@/lib/types";
 
 export function scoreCourse(candidate: Candidate, course: Course): Recommendation {
-  const candidateSkills = new Set(candidate.skills.map((skill) => skill.toLowerCase()));
-  const normalizedCourseSkills = course.skills.map((skill) => skill.toLowerCase());
+  const missingSkills = new Set(
+    candidate.missingSkills.map((skill) => skill.toLowerCase()),
+  );
+  const courseSkills = course.skills.map((skill) => skill.toLowerCase());
 
-  const matchedSkills = normalizedCourseSkills.filter((skill) => candidateSkills.has(skill));
-  const missingSkills = normalizedCourseSkills.filter((skill) => !candidateSkills.has(skill));
+  const addressedSkills = courseSkills.filter((skill) => missingSkills.has(skill));
+  const stillMissing = candidate.missingSkills
+    .map((s) => s.toLowerCase())
+    .filter((skill) => !addressedSkills.includes(skill));
 
-  const score = normalizedCourseSkills.length
-    ? matchedSkills.length / normalizedCourseSkills.length
+  const score = missingSkills.size
+    ? addressedSkills.length / missingSkills.size
     : 0;
 
   return {
@@ -16,8 +20,8 @@ export function scoreCourse(candidate: Candidate, course: Course): Recommendatio
     externalId: course.externalId,
     title: course.title,
     description: course.description,
-    matchedSkills,
-    missingSkills,
+    addressedSkills,
+    remainingSkills: stillMissing,
     score,
     enrollmentStatus: "not_started",
   };
