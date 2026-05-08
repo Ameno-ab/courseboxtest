@@ -70,7 +70,7 @@ async function handle(params: URLSearchParams): Promise<NextResponse> {
     return badRequest("unknown or expired login_hint");
   }
 
-  const targetLinkUri = params.get("target_link_uri") ?? undefined;
+  const targetLinkUri = session.targetLinkUri || params.get("target_link_uri") || undefined;
 
   const idToken = await createLtiLaunchToken({
     userId: session.userId,

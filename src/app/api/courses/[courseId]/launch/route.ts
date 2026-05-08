@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { buildOidcInitiateLoginUrl, isLtiConfigured, missingLtiEnvVars } from "@/lib/lti";
+import { buildOidcInitiateLoginUrl, getLtiConfig, isLtiConfigured, missingLtiEnvVars } from "@/lib/lti";
 import { createLoginSession } from "@/lib/lti-session";
 import type { Candidate, Course } from "@/lib/types";
 import { ObjectId } from "mongodb";
@@ -66,13 +66,16 @@ export async function POST(
   );
 
   if (isLtiConfigured()) {
+    const config = getLtiConfig();
+    const targetLinkUri = course.lmsLaunchUrl?.trim() || config.targetLinkUri!;
     const loginHint = await createLoginSession({
       userId: String(candidate._id),
       userEmail: candidate.email,
       userName: candidate.name,
       courseExternalId: course.externalId,
+      targetLinkUri,
     });
-    const redirectUrl = buildOidcInitiateLoginUrl({ loginHint });
+    const redirectUrl = buildOidcInitiateLoginUrl({ loginHint, targetLinkUri });
 
     return NextResponse.json(
       { mode: "lti_init", redirectUrl },

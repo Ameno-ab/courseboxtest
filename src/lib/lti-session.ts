@@ -10,6 +10,7 @@ export type LtiLoginSession = {
   userEmail: string;
   userName: string;
   courseExternalId: string;
+  targetLinkUri: string;
   createdAt: Date;
 };
 
@@ -18,6 +19,7 @@ export async function createLoginSession(input: {
   userEmail: string;
   userName: string;
   courseExternalId: string;
+  targetLinkUri: string;
 }): Promise<string> {
   const loginHint = crypto.randomUUID();
   const db = await getDb();
@@ -27,6 +29,7 @@ export async function createLoginSession(input: {
     userEmail: input.userEmail,
     userName: input.userName,
     courseExternalId: input.courseExternalId,
+    targetLinkUri: input.targetLinkUri,
     createdAt: new Date(),
   });
   return loginHint;

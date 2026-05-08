@@ -31,6 +31,11 @@ async function run() {
     { key: { createdAt: 1 }, expireAfterSeconds: 600 },
   ]);
 
+  await db.collection("skills").createIndexes([
+    { key: { slug: 1 }, unique: true },
+    { key: { label: 1 } },
+  ]);
+
   console.log("Indexes ensured successfully.");
 }
 

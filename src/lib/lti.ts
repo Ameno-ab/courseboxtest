@@ -68,6 +68,7 @@ export function missingLtiEnvVars(): string[] {
 
 export function buildOidcInitiateLoginUrl(input: {
   loginHint: string;
+  targetLinkUri?: string;
 }): string {
   const config = getLtiConfig();
   if (!config.initiateLoginUrl || !config.platformIssuer || !config.clientId || !config.deploymentId || !config.targetLinkUri) {
@@ -77,7 +78,7 @@ export function buildOidcInitiateLoginUrl(input: {
   const url = new URL(config.initiateLoginUrl);
   url.searchParams.set("iss", config.platformIssuer);
   url.searchParams.set("login_hint", input.loginHint);
-  url.searchParams.set("target_link_uri", config.targetLinkUri);
+  url.searchParams.set("target_link_uri", input.targetLinkUri ?? config.targetLinkUri);
   url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("lti_deployment_id", config.deploymentId);
   url.searchParams.set("lti_message_hint", "LtiResourceLinkRequest");

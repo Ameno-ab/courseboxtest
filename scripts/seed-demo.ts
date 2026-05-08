@@ -8,6 +8,26 @@ async function run() {
   await db.collection("courses").deleteMany({});
   await db.collection("enrollments").deleteMany({});
   await db.collection("integrationEvents").deleteMany({});
+  await db.collection("skills").deleteMany({});
+
+  const skillSlugs = [
+    "communication",
+    "sales",
+    "crm",
+    "negotiation",
+    "process",
+    "safety",
+    "compliance",
+    "incident response",
+    "risk",
+  ];
+  await db.collection("skills").insertMany(
+    skillSlugs.map((slug) => ({
+      slug,
+      label: slug.replace(/\b\w/g, (c) => c.toUpperCase()),
+      createdAt: now,
+    })),
+  );
 
   await db.collection("candidates").insertMany([
     {

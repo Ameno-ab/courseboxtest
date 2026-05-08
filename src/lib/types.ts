@@ -8,9 +8,17 @@ export type Course = {
   title: string;
   description?: string;
   skills: string[];
+  lmsLaunchUrl?: string;
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type Skill = {
+  _id?: ObjectId;
+  slug: string;
+  label: string;
+  createdAt: Date;
 };
 
 export type Candidate = {
