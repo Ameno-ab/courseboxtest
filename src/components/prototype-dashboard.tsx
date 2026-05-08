@@ -118,6 +118,43 @@ export default function PrototypeDashboard({
     }
   }
 
+  if (embeddedLaunch) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-white">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setEmbeddedLaunch(null)}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              aria-label="Back to dashboard"
+            >
+              <span aria-hidden="true">←</span>
+              <span>Back</span>
+            </button>
+            <span className="text-sm font-semibold text-slate-900">{embeddedLaunch.title}</span>
+          </div>
+          <a
+            href={embeddedLaunch.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Open in new tab
+          </a>
+        </div>
+        <iframe
+          key={embeddedLaunch.url}
+          src={embeddedLaunch.url}
+          title={embeddedLaunch.title}
+          className="h-full w-full flex-1 border-0"
+          allow="fullscreen; clipboard-write"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 md:px-10">
       <section className="rounded-3xl border border-amber-200/50 bg-linear-to-r from-amber-50 via-white to-sky-50 p-6 shadow-sm">
@@ -233,46 +270,6 @@ export default function PrototypeDashboard({
         )}
       </section>
 
-      {embeddedLaunch ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Launching ${embeddedLaunch.title}`}
-        >
-          <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-              <h3 className="text-sm font-semibold text-slate-900">{embeddedLaunch.title}</h3>
-              <div className="flex items-center gap-2">
-                <a
-                  href={embeddedLaunch.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
-                >
-                  Open in new tab
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setEmbeddedLaunch(null)}
-                  className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
-                  aria-label="Close"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-            <iframe
-              key={embeddedLaunch.url}
-              src={embeddedLaunch.url}
-              title={embeddedLaunch.title}
-              className="h-full w-full flex-1 border-0"
-              allow="fullscreen; clipboard-write"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
