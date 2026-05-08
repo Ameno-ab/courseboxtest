@@ -1,6 +1,8 @@
 import { getDb } from "@/lib/db";
 import type { Course } from "@/lib/types";
+import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +31,8 @@ export async function GET() {
   );
 }
 
-const createSchema = z.object({
-  externalId: z.string().min(1).max(120),
+const upsertSchema = z.object({
+  id: z.string().optional(),
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   skills: z.array(z.string().min(1).max(80)).max(50),
@@ -43,7 +45,7 @@ const createSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const body = createSchema.safeParse(await request.json().catch(() => null));
+  const body = upsertSchema.safeParse(await request.json().catch(() => null));
   if (!body.success) {
     return NextResponse.json(
       { error: "Invalid body.", details: body.error.flatten() },
@@ -57,29 +59,46 @@ export async function POST(request: NextRequest) {
   );
 
   const db = await getDb();
-  const result = await db.collection<Course>("courses").findOneAndUpdate(
-    { externalId: body.data.externalId },
-    {
-      $set: {
-        title: body.data.title,
-        description: body.data.description ?? "",
-        skills,
-        lmsLaunchUrl: body.data.lmsLaunchUrl,
-        updatedAt: now,
+
+  if (body.data.id) {
+    if (!ObjectId.isValid(body.data.id)) {
+      return NextResponse.json({ error: "Invalid id." }, { status: 400 });
+    }
+    const result = await db.collection<Course>("courses").findOneAndUpdate(
+      { _id: new ObjectId(body.data.id) },
+      {
+        $set: {
+          title: body.data.title,
+          description: body.data.description ?? "",
+          skills,
+          lmsLaunchUrl: body.data.lmsLaunchUrl,
+          updatedAt: now,
+        },
       },
-      $setOnInsert: {
-        externalId: body.data.externalId,
-        createdAt: now,
-      },
-    },
-    { upsert: true, returnDocument: "after" },
-  );
+      { returnDocument: "after" },
+    );
+    if (!result) {
+      return NextResponse.json({ error: "Course not found." }, { status: 404 });
+    }
+    return NextResponse.json(
+      { id: String(result._id), externalId: result.externalId },
+      { headers: { "cache-control": "no-store" } },
+    );
+  }
+
+  const externalId = `cbx-${crypto.randomUUID()}`;
+  const insert = await db.collection<Course>("courses").insertOne({
+    externalId,
+    title: body.data.title,
+    description: body.data.description ?? "",
+    skills,
+    lmsLaunchUrl: body.data.lmsLaunchUrl,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return NextResponse.json(
-    {
-      id: result ? String(result._id) : null,
-      externalId: body.data.externalId,
-    },
+    { id: String(insert.insertedId), externalId },
     { status: 201, headers: { "cache-control": "no-store" } },
   );
 }

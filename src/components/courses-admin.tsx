@@ -24,12 +24,22 @@ export default function CoursesAdmin({
   const [courses, setCourses] = useState<CourseRow[]>(initialCourses);
   const [skills, setSkills] = useState<SkillRow[]>(initialSkills);
 
-  const [externalId, setExternalId] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingExternalId, setEditingExternalId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [lmsLaunchUrl, setLmsLaunchUrl] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
+
+  function resetForm() {
+    setEditingId(null);
+    setEditingExternalId(null);
+    setTitle("");
+    setDescription("");
+    setLmsLaunchUrl("");
+    setSelectedSkills([]);
+  }
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,8 +83,8 @@ export default function CoursesAdmin({
     setError(null);
     setSuccess(null);
 
-    if (!externalId.trim() || !title.trim()) {
-      setError("Course ID and title are required.");
+    if (!title.trim()) {
+      setError("Title is required.");
       return;
     }
 
@@ -84,7 +94,7 @@ export default function CoursesAdmin({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          externalId: externalId.trim(),
+          id: editingId ?? undefined,
           title: title.trim(),
           description: description.trim() || undefined,
           skills: selectedSkills,
@@ -101,13 +111,8 @@ export default function CoursesAdmin({
 
       const list = await fetch("/api/courses").then((r) => r.json());
       setCourses(list.courses);
-
-      setExternalId("");
-      setTitle("");
-      setDescription("");
-      setLmsLaunchUrl("");
-      setSelectedSkills([]);
-      setSuccess("Course saved.");
+      resetForm();
+      setSuccess(editingId ? "Course updated." : "Course created.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
@@ -142,41 +147,44 @@ export default function CoursesAdmin({
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Add or update a course</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Saving with an existing Course ID updates that course in place.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {editingId ? "Edit course" : "Add new course"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {editingId
+                ? "Editing an existing course — changes save in place."
+                : "Course ID is generated automatically when you save."}
+            </p>
+            {editingExternalId ? (
+              <p className="mt-1 break-all text-xs text-slate-400">
+                ID: {editingExternalId}
+              </p>
+            ) : null}
+          </div>
+          {editingId ? (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Cancel edit
+            </button>
+          ) : null}
+        </div>
 
         <form onSubmit={submit} className="mt-5 grid gap-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
-                Course ID (externalId) *
-              </label>
-              <input
-                type="text"
-                value={externalId}
-                onChange={(e) => setExternalId(e.target.value)}
-                placeholder="cbx-sales-101"
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
-                required
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                Stable identifier for this course in your platform.
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Title *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Sales Foundations"
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
-                required
-              />
-            </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Title *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Sales Foundations"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
+              required
+            />
           </div>
 
           <div>
@@ -286,12 +294,13 @@ export default function CoursesAdmin({
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">{course.title}</h3>
-                    <p className="text-xs text-slate-500">ID: {course.externalId}</p>
+                    <p className="break-all text-xs text-slate-500">ID: {course.externalId}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      setExternalId(course.externalId);
+                      setEditingId(course.id);
+                      setEditingExternalId(course.externalId);
                       setTitle(course.title);
                       setDescription(course.description);
                       setLmsLaunchUrl(course.lmsLaunchUrl);
