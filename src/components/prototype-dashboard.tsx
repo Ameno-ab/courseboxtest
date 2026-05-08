@@ -39,6 +39,10 @@ export default function PrototypeDashboard({
   const [loading, setLoading] = useState(false);
   const [launchingCourseId, setLaunchingCourseId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [embeddedLaunch, setEmbeddedLaunch] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
 
   const selectedCandidate = useMemo(
     () => candidates.find((candidate) => candidate.id === candidateId),
@@ -93,13 +97,18 @@ export default function PrototypeDashboard({
         throw new Error(payload.error ?? "Failed to launch course.");
       }
 
+      const recommendation = result?.recommendations.find(
+        (r) => r.courseId === courseId,
+      );
+      const title = recommendation?.title ?? "Course";
+
       if (payload.mode === "direct_url" && payload.launchUrl) {
-        window.open(payload.launchUrl, "_blank", "noopener,noreferrer");
+        setEmbeddedLaunch({ url: payload.launchUrl, title });
         return;
       }
 
       if (payload.mode === "lti_init" && payload.redirectUrl) {
-        window.open(payload.redirectUrl, "_blank", "noopener,noreferrer");
+        setEmbeddedLaunch({ url: payload.redirectUrl, title });
         return;
       }
     } catch (launchError) {
@@ -223,6 +232,47 @@ export default function PrototypeDashboard({
           </div>
         )}
       </section>
+
+      {embeddedLaunch ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Launching ${embeddedLaunch.title}`}
+        >
+          <div className="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <h3 className="text-sm font-semibold text-slate-900">{embeddedLaunch.title}</h3>
+              <div className="flex items-center gap-2">
+                <a
+                  href={embeddedLaunch.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                >
+                  Open in new tab
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setEmbeddedLaunch(null)}
+                  className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                  aria-label="Close"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <iframe
+              key={embeddedLaunch.url}
+              src={embeddedLaunch.url}
+              title={embeddedLaunch.title}
+              className="h-full w-full flex-1 border-0"
+              allow="fullscreen; clipboard-write"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
