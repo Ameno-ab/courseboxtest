@@ -5,7 +5,7 @@ import { consumeLoginSession } from "@/lib/lti-session";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  return handle(request.nextUrl.searchParams);
+  return safeHandle(() => handle(request.nextUrl.searchParams));
 }
 
 export async function POST(request: NextRequest) {
@@ -14,9 +14,27 @@ export async function POST(request: NextRequest) {
     const form = await request.formData();
     const params = new URLSearchParams();
     for (const [k, v] of form.entries()) params.set(k, String(v));
-    return handle(params);
+    return safeHandle(() => handle(params));
   }
-  return handle(request.nextUrl.searchParams);
+  return safeHandle(() => handle(request.nextUrl.searchParams));
+}
+
+async function safeHandle(fn: () => Promise<NextResponse>): Promise<NextResponse> {
+  try {
+    return await fn();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown";
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error("[lti/auth] unhandled error:", message, stack);
+    return NextResponse.json(
+      {
+        error: "lti_auth_failed",
+        message,
+        stack: process.env.NODE_ENV === "production" ? undefined : stack,
+      },
+      { status: 500, headers: { "cache-control": "no-store" } },
+    );
+  }
 }
 
 async function handle(params: URLSearchParams): Promise<NextResponse> {
