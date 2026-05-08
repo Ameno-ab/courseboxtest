@@ -38,17 +38,21 @@ export function getLtiConfig() {
 }
 
 export function isLtiConfigured(): boolean {
+  return missingLtiEnvVars().length === 0;
+}
+
+export function missingLtiEnvVars(): string[] {
   const c = getLtiConfig();
-  return Boolean(
-    c.platformIssuer &&
-      c.clientId &&
-      c.deploymentId &&
-      c.targetLinkUri &&
-      c.launchUrl &&
-      c.initiateLoginUrl &&
-      c.keyId &&
-      c.privateKeyPem,
-  );
+  const missing: string[] = [];
+  if (!c.platformIssuer) missing.push("LTI_PLATFORM_ISSUER");
+  if (!c.clientId) missing.push("LTI_TOOL_CLIENT_ID");
+  if (!c.deploymentId) missing.push("LTI_DEPLOYMENT_ID");
+  if (!c.targetLinkUri) missing.push("LTI_TARGET_LINK_URI");
+  if (!c.launchUrl) missing.push("COURSEBOX_LTI_LAUNCH_URL");
+  if (!c.initiateLoginUrl) missing.push("COURSEBOX_LTI_INITIATE_LOGIN_URL");
+  if (!c.keyId) missing.push("LTI_KEY_ID");
+  if (!c.privateKeyPem) missing.push("LTI_PLATFORM_PRIVATE_KEY_PEM");
+  return missing;
 }
 
 export function buildOidcInitiateLoginUrl(input: {

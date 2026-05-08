@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { buildOidcInitiateLoginUrl, isLtiConfigured } from "@/lib/lti";
+import { buildOidcInitiateLoginUrl, isLtiConfigured, missingLtiEnvVars } from "@/lib/lti";
 import { createLoginSession } from "@/lib/lti-session";
 import type { Candidate, Course } from "@/lib/types";
 import { ObjectId } from "mongodb";
@@ -80,13 +80,18 @@ export async function POST(
     );
   }
 
-  const embedBaseUrl = process.env.COURSEBOX_EMBED_BASE_URL;
+  const embedBaseUrl = process.env.COURSEBOX_EMBED_BASE_URL?.trim();
 
   if (!embedBaseUrl) {
+    const missing = missingLtiEnvVars();
     return NextResponse.json(
       {
-        error:
-          "No launch configuration found. Configure LTI env vars or COURSEBOX_EMBED_BASE_URL.",
+        error: "No launch configuration found.",
+        ltiMissing: missing,
+        hint:
+          missing.length > 0
+            ? `LTI is partially configured. Missing on this deployment: ${missing.join(", ")}. Add them in Vercel → Settings → Environment Variables and redeploy.`
+            : "Set COURSEBOX_EMBED_BASE_URL or all LTI env vars.",
       },
       { status: 400 },
     );

@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { isLtiConfigured, missingLtiEnvVars } from "@/lib/lti";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,10 @@ export async function GET() {
         database: ping.ok === 1 ? "up" : "degraded",
         dbName: db.databaseName,
         counts: { candidates: candidateCount, courses: courseCount },
+        lti: {
+          configured: isLtiConfigured(),
+          missing: missingLtiEnvVars(),
+        },
         timestamp: new Date().toISOString(),
       },
       { headers: { "cache-control": "no-store" } },
