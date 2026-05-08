@@ -42,7 +42,9 @@ export default function PrototypeDashboard({
   const [embeddedLaunch, setEmbeddedLaunch] = useState<{
     url: string;
     title: string;
+    courseId: string;
   } | null>(null);
+  const [openingNewTab, setOpeningNewTab] = useState(false);
 
   const selectedCandidate = useMemo(
     () => candidates.find((candidate) => candidate.id === candidateId),
@@ -103,18 +105,48 @@ export default function PrototypeDashboard({
       const title = recommendation?.title ?? "Course";
 
       if (payload.mode === "direct_url" && payload.launchUrl) {
-        setEmbeddedLaunch({ url: payload.launchUrl, title });
+        setEmbeddedLaunch({ url: payload.launchUrl, title, courseId });
         return;
       }
 
       if (payload.mode === "lti_init" && payload.redirectUrl) {
-        setEmbeddedLaunch({ url: payload.redirectUrl, title });
+        setEmbeddedLaunch({ url: payload.redirectUrl, title, courseId });
         return;
       }
     } catch (launchError) {
       setError(launchError instanceof Error ? launchError.message : "Unknown launch error");
     } finally {
       setLaunchingCourseId(null);
+    }
+  }
+
+  async function openInNewTab() {
+    if (!embeddedLaunch || !candidateId) return;
+    setOpeningNewTab(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/courses/${embeddedLaunch.courseId}/launch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to start a fresh launch.");
+      }
+      const freshUrl =
+        payload.mode === "lti_init"
+          ? payload.redirectUrl
+          : payload.mode === "direct_url"
+          ? payload.launchUrl
+          : null;
+      if (freshUrl) {
+        window.open(freshUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error opening new tab.");
+    } finally {
+      setOpeningNewTab(false);
     }
   }
 
@@ -134,14 +166,14 @@ export default function PrototypeDashboard({
             </button>
             <span className="text-sm font-semibold text-slate-900">{embeddedLaunch.title}</span>
           </div>
-          <a
-            href={embeddedLaunch.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+          <button
+            type="button"
+            onClick={openInNewTab}
+            disabled={openingNewTab}
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Open in new tab
-          </a>
+            {openingNewTab ? "Opening..." : "Open in new tab"}
+          </button>
         </div>
         <iframe
           key={embeddedLaunch.url}
