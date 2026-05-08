@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
-import { isLtiConfigured, missingLtiEnvVars } from "@/lib/lti";
+import { getLtiConfig, isLtiConfigured, missingLtiEnvVars } from "@/lib/lti";
+import { importPKCS8 } from "jose";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export async function GET() {
         lti: {
           configured: isLtiConfigured(),
           missing: missingLtiEnvVars(),
+          privateKey: await probePrivateKey(),
         },
         timestamp: new Date().toISOString(),
       },
@@ -37,5 +39,24 @@ export async function GET() {
       },
       { status: 500, headers: { "cache-control": "no-store" } },
     );
+  }
+}
+
+async function probePrivateKey(): Promise<{ ok: boolean; firstLine?: string; lastLine?: string; error?: string }> {
+  const pem = getLtiConfig().privateKeyPem;
+  if (!pem) return { ok: false, error: "not set" };
+  const lines = pem.trim().split("\n");
+  const firstLine = lines[0];
+  const lastLine = lines[lines.length - 1];
+  try {
+    await importPKCS8(pem, "RS256");
+    return { ok: true, firstLine, lastLine };
+  } catch (e) {
+    return {
+      ok: false,
+      firstLine,
+      lastLine,
+      error: e instanceof Error ? e.message : "unknown",
+    };
   }
 }

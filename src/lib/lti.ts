@@ -17,10 +17,21 @@ function readEnv(key: string): string | undefined {
 }
 
 function readPem(key: string): string | undefined {
-  const raw = process.env[key]?.trim();
+  let raw = process.env[key];
   if (!raw) return undefined;
-  // Local .env stores PEMs as single-line with \n escapes; Vercel preserves real newlines.
-  return raw.includes("\\n") ? raw.replace(/\\n/g, "\n") : raw;
+  raw = raw.trim();
+  // Strip a single layer of surrounding quotes if someone pasted a quoted .env value.
+  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+    raw = raw.slice(1, -1);
+  }
+  // Convert \n / \r\n escape sequences to real newlines (single-line .env style).
+  if (raw.includes("\\n") || raw.includes("\\r")) {
+    raw = raw.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\r/g, "\n");
+  }
+  // Normalise CRLF → LF and ensure a trailing newline (some PEM parsers are strict).
+  raw = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  if (!raw.endsWith("\n")) raw += "\n";
+  return raw;
 }
 
 export function getLtiConfig() {
