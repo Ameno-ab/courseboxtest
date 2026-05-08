@@ -11,16 +11,27 @@ type LtiLaunchTokenInput = {
 
 const alg = "RS256";
 
+function readEnv(key: string): string | undefined {
+  return process.env[key]?.trim() || undefined;
+}
+
+function readPem(key: string): string | undefined {
+  const raw = process.env[key]?.trim();
+  if (!raw) return undefined;
+  // Local .env stores PEMs as single-line with \n escapes; Vercel preserves real newlines.
+  return raw.includes("\\n") ? raw.replace(/\\n/g, "\n") : raw;
+}
+
 export function getLtiConfig() {
   return {
-    platformIssuer: process.env.LTI_PLATFORM_ISSUER,
-    clientId: process.env.LTI_TOOL_CLIENT_ID,
-    deploymentId: process.env.LTI_DEPLOYMENT_ID,
-    targetLinkUri: process.env.LTI_TARGET_LINK_URI,
-    launchUrl: process.env.COURSEBOX_LTI_LAUNCH_URL,
-    keyId: process.env.LTI_KEY_ID,
-    privateKeyPem: process.env.LTI_PLATFORM_PRIVATE_KEY_PEM,
-    jwksJson: process.env.LTI_PLATFORM_PUBLIC_JWKS,
+    platformIssuer: readEnv("LTI_PLATFORM_ISSUER"),
+    clientId: readEnv("LTI_TOOL_CLIENT_ID"),
+    deploymentId: readEnv("LTI_DEPLOYMENT_ID"),
+    targetLinkUri: readEnv("LTI_TARGET_LINK_URI"),
+    launchUrl: readEnv("COURSEBOX_LTI_LAUNCH_URL"),
+    keyId: readEnv("LTI_KEY_ID"),
+    privateKeyPem: readPem("LTI_PLATFORM_PRIVATE_KEY_PEM"),
+    jwksJson: readEnv("LTI_PLATFORM_PUBLIC_JWKS"),
   };
 }
 
@@ -68,7 +79,7 @@ export async function createLtiLaunchToken(input: LtiLaunchTokenInput): Promise<
 }
 
 export function getPublicJwks() {
-  const jwksJson = process.env.LTI_PLATFORM_PUBLIC_JWKS;
+  const jwksJson = readEnv("LTI_PLATFORM_PUBLIC_JWKS");
 
   if (!jwksJson) {
     return { keys: [] };
