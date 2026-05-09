@@ -24,6 +24,7 @@ export async function GET() {
         description: course.description ?? "",
         skills: course.skills ?? [],
         lmsLaunchUrl: course.lmsLaunchUrl ?? "",
+        courseboxCourseId: course.courseboxCourseId ?? "",
         updatedAt: course.updatedAt,
       })),
     },
@@ -40,6 +41,11 @@ const upsertSchema = z.object({
     .string()
     .url("lmsLaunchUrl must be a valid URL")
     .max(2000)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  courseboxCourseId: z
+    .string()
+    .max(120)
     .optional()
     .or(z.literal("").transform(() => undefined)),
 });
@@ -72,6 +78,7 @@ export async function POST(request: NextRequest) {
           description: body.data.description ?? "",
           skills,
           lmsLaunchUrl: body.data.lmsLaunchUrl,
+          courseboxCourseId: body.data.courseboxCourseId,
           updatedAt: now,
         },
       },
@@ -93,6 +100,7 @@ export async function POST(request: NextRequest) {
     description: body.data.description ?? "",
     skills,
     lmsLaunchUrl: body.data.lmsLaunchUrl,
+    courseboxCourseId: body.data.courseboxCourseId,
     createdAt: now,
     updatedAt: now,
   });

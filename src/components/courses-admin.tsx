@@ -10,6 +10,7 @@ type CourseRow = {
   description: string;
   skills: string[];
   lmsLaunchUrl: string;
+  courseboxCourseId?: string;
 };
 
 type SkillRow = { slug: string; label: string };
@@ -29,6 +30,7 @@ export default function CoursesAdmin({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [lmsLaunchUrl, setLmsLaunchUrl] = useState("");
+  const [courseboxCourseId, setCourseboxCourseId] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
 
@@ -38,6 +40,7 @@ export default function CoursesAdmin({
     setTitle("");
     setDescription("");
     setLmsLaunchUrl("");
+    setCourseboxCourseId("");
     setSelectedSkills([]);
   }
 
@@ -99,6 +102,7 @@ export default function CoursesAdmin({
           description: description.trim() || undefined,
           skills: selectedSkills,
           lmsLaunchUrl: lmsLaunchUrl.trim() || undefined,
+          courseboxCourseId: courseboxCourseId.trim() || undefined,
         }),
       });
       const payload = await response.json();
@@ -214,6 +218,24 @@ export default function CoursesAdmin({
           </div>
 
           <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Coursebox Course ID
+            </label>
+            <input
+              type="text"
+              value={courseboxCourseId}
+              onChange={(e) => setCourseboxCourseId(e.target.value)}
+              placeholder="e.g. 456"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              The numeric Course Id Coursebox sends in completion webhooks. Required
+              for Zapier completion events to match this course (Coursebox does not
+              send the external ID).
+            </p>
+          </div>
+
+          <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Skills</label>
             <div className="flex flex-wrap gap-2">
               {skills.length === 0 ? (
@@ -304,6 +326,7 @@ export default function CoursesAdmin({
                       setTitle(course.title);
                       setDescription(course.description);
                       setLmsLaunchUrl(course.lmsLaunchUrl);
+                      setCourseboxCourseId(course.courseboxCourseId ?? "");
                       setSelectedSkills(course.skills);
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
@@ -322,6 +345,16 @@ export default function CoursesAdmin({
                 ) : (
                   <p className="mt-2 text-xs text-amber-700">
                     No Coursebox launch URL — launches will use the global env-var fallback.
+                  </p>
+                )}
+                {course.courseboxCourseId ? (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Coursebox Course ID: {course.courseboxCourseId}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-amber-700">
+                    No Coursebox Course ID — Zapier completion events for this course
+                    won&apos;t match unless they include candidateEmail + matching externalId.
                   </p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-1">

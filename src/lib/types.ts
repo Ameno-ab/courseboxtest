@@ -9,6 +9,7 @@ export type Course = {
   description?: string;
   skills: string[];
   lmsLaunchUrl?: string;
+  courseboxCourseId?: string;
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -26,6 +27,7 @@ export type Candidate = {
   name: string;
   email: string;
   missingSkills: string[];
+  courseboxUserId?: string;
   metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;

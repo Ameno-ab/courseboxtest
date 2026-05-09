@@ -4,15 +4,32 @@ import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-const payloadSchema = z.object({
-  eventId: z.string().min(1),
-  type: z.string().min(1),
-  candidateEmail: z.string().email().optional(),
-  courseExternalId: z.string().min(1),
-  status: z.enum(["in_progress", "completed"]).default("completed"),
-  score: z.number().optional(),
-  completedAt: z.string().datetime().optional(),
-});
+const flexibleString = z
+  .union([z.string(), z.number()])
+  .transform((v) => String(v).trim())
+  .pipe(z.string().min(1));
+
+const payloadSchema = z
+  .object({
+    eventId: flexibleString,
+    type: z.string().min(1),
+    candidateEmail: z.string().email().optional(),
+    courseboxUserId: flexibleString.optional(),
+    courseExternalId: flexibleString.optional(),
+    courseboxCourseId: flexibleString.optional(),
+    status: z.enum(["in_progress", "completed"]).default("completed"),
+    score: z.union([z.number(), z.string()])
+      .transform((v) => (typeof v === "string" ? Number(v) : v))
+      .pipe(z.number().finite())
+      .optional(),
+    completedAt: z.string().optional(),
+  })
+  .refine((v) => v.candidateEmail || v.courseboxUserId, {
+    message: "Either candidateEmail or courseboxUserId is required.",
+  })
+  .refine((v) => v.courseExternalId || v.courseboxCourseId, {
+    message: "Either courseExternalId or courseboxCourseId is required.",
+  });
 
 function authorized(request: NextRequest): boolean {
   const secret = process.env.ZAPIER_WEBHOOK_SECRET;
@@ -50,9 +67,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, idempotent: true });
   }
 
-  const course = await db
-    .collection("courses")
-    .findOne({ externalId: payload.courseExternalId });
+  const courseQuery = payload.courseboxCourseId
+    ? { courseboxCourseId: payload.courseboxCourseId }
+    : { externalId: payload.courseExternalId! };
+  const course = await db.collection("courses").findOne(courseQuery);
 
   if (!course) {
     await db.collection("integrationEvents").insertOne({
@@ -70,13 +88,27 @@ export async function POST(request: NextRequest) {
 
   let candidateId: ObjectId | null = null;
 
-  if (payload.candidateEmail) {
-    const candidate = await db
-      .collection("candidates")
+  if (payload.courseboxUserId) {
+    const byUserId = await db
+      .collection<Candidate>("candidates")
+      .findOne({ courseboxUserId: payload.courseboxUserId });
+    if (byUserId?._id) candidateId = byUserId._id as ObjectId;
+  }
+
+  if (!candidateId && payload.candidateEmail) {
+    const byEmail = await db
+      .collection<Candidate>("candidates")
       .findOne({ email: payload.candidateEmail.toLowerCase() });
 
-    if (candidate?._id) {
-      candidateId = candidate._id as ObjectId;
+    if (byEmail?._id) {
+      candidateId = byEmail._id as ObjectId;
+      // Capture Coursebox user id for next time so future events can match by id even if emails diverge.
+      if (payload.courseboxUserId && !byEmail.courseboxUserId) {
+        await db.collection<Candidate>("candidates").updateOne(
+          { _id: byEmail._id },
+          { $set: { courseboxUserId: payload.courseboxUserId, updatedAt: new Date() } },
+        );
+      }
     }
   }
 

@@ -8,6 +8,7 @@ type CandidateRow = {
   name: string;
   email: string;
   missingSkills: string[];
+  courseboxUserId?: string;
 };
 
 type SkillRow = { slug: string; label: string };
@@ -25,6 +26,7 @@ export default function CandidatesAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [courseboxUserId, setCourseboxUserId] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
 
@@ -38,6 +40,7 @@ export default function CandidatesAdmin({
     setEditingId(null);
     setName("");
     setEmail("");
+    setCourseboxUserId("");
     setSelectedSkills([]);
   }
 
@@ -96,6 +99,7 @@ export default function CandidatesAdmin({
           name: name.trim(),
           email: email.trim(),
           missingSkills: selectedSkills,
+          courseboxUserId: courseboxUserId.trim() || undefined,
         }),
       });
       const payload = await response.json();
@@ -179,6 +183,24 @@ export default function CandidatesAdmin({
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Coursebox User ID
+            </label>
+            <input
+              type="text"
+              value={courseboxUserId}
+              onChange={(e) => setCourseboxUserId(e.target.value)}
+              placeholder="e.g. 123"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Optional. The numeric User Id Coursebox sends in completion webhooks.
+              If set, completion events match this candidate by ID instead of email.
+              Captured automatically the first time a Zapier event matches by email.
+            </p>
           </div>
 
           <div>
@@ -280,6 +302,7 @@ export default function CandidatesAdmin({
                         setEditingId(candidate.id);
                         setName(candidate.name);
                         setEmail(candidate.email);
+                        setCourseboxUserId(candidate.courseboxUserId ?? "");
                         setSelectedSkills(candidate.missingSkills);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
@@ -303,6 +326,11 @@ export default function CandidatesAdmin({
                     ))
                   )}
                 </div>
+                {candidate.courseboxUserId ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Coursebox User ID: {candidate.courseboxUserId}
+                  </p>
+                ) : null}
               </article>
             ))
           )}
