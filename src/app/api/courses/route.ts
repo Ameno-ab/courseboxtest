@@ -52,9 +52,16 @@ const upsertSchema = z.object({
 
 function extractCourseboxIdFromLaunchUrl(url?: string): string | undefined {
   if (!url) return undefined;
-  // Coursebox launch URLs embed the course UUID in either the path or the
-  // ?link= query param: /courses/<uuid>/about
-  const match = url.match(
+  // Coursebox launch URLs put the course UUID in either the path
+  // (.../courses/<uuid>/about) or inside a URL-encoded ?link= param
+  // (...%2Fcourses%2F<uuid>%2Fabout). Decode then match.
+  let decoded = url;
+  try {
+    decoded = decodeURIComponent(url);
+  } catch {
+    // ignore — fall back to raw URL
+  }
+  const match = decoded.match(
     /\/courses\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/,
   );
   return match?.[1];

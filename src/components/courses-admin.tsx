@@ -43,7 +43,16 @@ export default function CoursesAdmin({
   }
 
   function extractCourseboxIdFromLaunchUrl(url: string): string | null {
-    const match = url.match(
+    // Coursebox launch URLs put the course UUID in either the path
+    // (.../courses/<uuid>/about) or inside a URL-encoded ?link= param
+    // (...%2Fcourses%2F<uuid>%2Fabout). Decode then match.
+    let decoded = url;
+    try {
+      decoded = decodeURIComponent(url);
+    } catch {
+      // ignore — fall back to raw URL
+    }
+    const match = decoded.match(
       /\/courses\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/,
     );
     return match?.[1] ?? null;
