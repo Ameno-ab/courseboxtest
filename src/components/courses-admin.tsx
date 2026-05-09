@@ -44,6 +44,27 @@ export default function CoursesAdmin({
     setSelectedSkills([]);
   }
 
+  function extractCourseboxIdFromLaunchUrl(url: string): string | null {
+    const match = url.match(
+      /\/courses\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/,
+    );
+    return match?.[1] ?? null;
+  }
+
+  function handleLaunchUrlChange(value: string) {
+    setLmsLaunchUrl(value);
+    const extracted = extractCourseboxIdFromLaunchUrl(value);
+    // Auto-fill Course ID from the URL — but only if the user hasn't already typed
+    // something custom OR the field already matches a previous extraction.
+    if (extracted) {
+      setCourseboxCourseId((prev) => {
+        if (!prev) return extracted;
+        if (extractCourseboxIdFromLaunchUrl(lmsLaunchUrl) === prev) return extracted;
+        return prev;
+      });
+    }
+  }
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -208,32 +229,41 @@ export default function CoursesAdmin({
             <input
               type="url"
               value={lmsLaunchUrl}
-              onChange={(e) => setLmsLaunchUrl(e.target.value)}
+              onChange={(e) => handleLaunchUrlChange(e.target.value)}
               placeholder="https://my.coursebox.ai/lti/launch?link=..."
               className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
             />
             <p className="mt-1 text-xs text-slate-500">
               From Coursebox &gt; Course &gt; Publish to LMS &gt; copy the Launch URL.
+              The Coursebox Course ID below auto-fills from this URL.
             </p>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              Coursebox Course ID
-            </label>
-            <input
-              type="text"
-              value={courseboxCourseId}
-              onChange={(e) => setCourseboxCourseId(e.target.value)}
-              placeholder="e.g. 456"
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              The numeric Course Id Coursebox sends in completion webhooks. Required
-              for Zapier completion events to match this course (Coursebox does not
-              send the external ID).
-            </p>
-          </div>
+          <details className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <summary className="cursor-pointer text-xs font-medium text-slate-600">
+              Advanced — Coursebox Course ID
+              {courseboxCourseId ? (
+                <span className="ml-2 break-all text-emerald-700">
+                  ✓ {courseboxCourseId}
+                </span>
+              ) : (
+                <span className="ml-2 text-amber-700">not set</span>
+              )}
+            </summary>
+            <div className="mt-3">
+              <input
+                type="text"
+                value={courseboxCourseId}
+                onChange={(e) => setCourseboxCourseId(e.target.value)}
+                placeholder="auto-filled from launch URL"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                Auto-extracted from the launch URL above. Override only if you need
+                a different ID for matching Zapier completion events.
+              </p>
+            </div>
+          </details>
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Skills</label>
