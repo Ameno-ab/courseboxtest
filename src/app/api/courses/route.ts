@@ -50,6 +50,16 @@ const upsertSchema = z.object({
     .or(z.literal("").transform(() => undefined)),
 });
 
+function extractCourseboxIdFromLaunchUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  // Coursebox launch URLs embed the course UUID in either the path or the
+  // ?link= query param: /courses/<uuid>/about
+  const match = url.match(
+    /\/courses\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/,
+  );
+  return match?.[1];
+}
+
 export async function POST(request: NextRequest) {
   const body = upsertSchema.safeParse(await request.json().catch(() => null));
   if (!body.success) {
@@ -63,6 +73,10 @@ export async function POST(request: NextRequest) {
   const skills = Array.from(
     new Set(body.data.skills.map((s) => s.trim().toLowerCase()).filter(Boolean)),
   );
+  // Auto-extract Coursebox course UUID from the launch URL if not provided.
+  const courseboxCourseId =
+    body.data.courseboxCourseId ??
+    extractCourseboxIdFromLaunchUrl(body.data.lmsLaunchUrl);
 
   const db = await getDb();
 
@@ -78,7 +92,7 @@ export async function POST(request: NextRequest) {
           description: body.data.description ?? "",
           skills,
           lmsLaunchUrl: body.data.lmsLaunchUrl,
-          courseboxCourseId: body.data.courseboxCourseId,
+          courseboxCourseId,
           updatedAt: now,
         },
       },
@@ -100,7 +114,7 @@ export async function POST(request: NextRequest) {
     description: body.data.description ?? "",
     skills,
     lmsLaunchUrl: body.data.lmsLaunchUrl,
-    courseboxCourseId: body.data.courseboxCourseId,
+    courseboxCourseId,
     createdAt: now,
     updatedAt: now,
   });
