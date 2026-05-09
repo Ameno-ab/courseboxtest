@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type CandidateRow = {
@@ -266,19 +267,27 @@ export default function CandidatesAdmin({
                     <h3 className="text-sm font-semibold text-slate-900">{candidate.name}</h3>
                     <p className="text-xs text-slate-500">{candidate.email}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingId(candidate.id);
-                      setName(candidate.name);
-                      setEmail(candidate.email);
-                      setSelectedSkills(candidate.missingSkills);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    className="rounded-md px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <Link
+                      href={`/candidates/${candidate.id}`}
+                      className="rounded-md px-2 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50"
+                    >
+                      View status
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(candidate.id);
+                        setName(candidate.name);
+                        setEmail(candidate.email);
+                        setSelectedSkills(candidate.missingSkills);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="rounded-md px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1">
                   {candidate.missingSkills.length === 0 ? (

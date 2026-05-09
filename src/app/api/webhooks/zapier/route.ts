@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import type { Candidate } from "@/lib/types";
 import { ObjectId } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -105,7 +106,12 @@ export async function POST(request: NextRequest) {
         status: payload.status,
         source: "zapier",
         score: payload.score,
-        completedAt: payload.completedAt ? new Date(payload.completedAt) : now,
+        completedAt:
+          payload.status === "completed"
+            ? payload.completedAt
+              ? new Date(payload.completedAt)
+              : now
+            : undefined,
         updatedAt: now,
       },
       $setOnInsert: {
@@ -118,6 +124,18 @@ export async function POST(request: NextRequest) {
     { upsert: true },
   );
 
+  let acquiredSkills: string[] = [];
+  if (payload.status === "completed" && Array.isArray(course.skills) && course.skills.length) {
+    acquiredSkills = course.skills.map((s: string) => s.toLowerCase());
+    await db.collection<Candidate>("candidates").updateOne(
+      { _id: candidateId },
+      {
+        $pull: { missingSkills: { $in: acquiredSkills } },
+        $set: { updatedAt: now },
+      },
+    );
+  }
+
   await db.collection("integrationEvents").insertOne({
     provider: "zapier",
     eventId: payload.eventId,
@@ -128,5 +146,9 @@ export async function POST(request: NextRequest) {
     processedAt: now,
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    enrollment: { status: payload.status },
+    acquiredSkills,
+  });
 }
