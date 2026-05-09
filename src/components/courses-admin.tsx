@@ -30,7 +30,6 @@ export default function CoursesAdmin({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [lmsLaunchUrl, setLmsLaunchUrl] = useState("");
-  const [courseboxCourseId, setCourseboxCourseId] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
 
@@ -40,7 +39,6 @@ export default function CoursesAdmin({
     setTitle("");
     setDescription("");
     setLmsLaunchUrl("");
-    setCourseboxCourseId("");
     setSelectedSkills([]);
   }
 
@@ -51,19 +49,7 @@ export default function CoursesAdmin({
     return match?.[1] ?? null;
   }
 
-  function handleLaunchUrlChange(value: string) {
-    setLmsLaunchUrl(value);
-    const extracted = extractCourseboxIdFromLaunchUrl(value);
-    // Auto-fill Course ID from the URL — but only if the user hasn't already typed
-    // something custom OR the field already matches a previous extraction.
-    if (extracted) {
-      setCourseboxCourseId((prev) => {
-        if (!prev) return extracted;
-        if (extractCourseboxIdFromLaunchUrl(lmsLaunchUrl) === prev) return extracted;
-        return prev;
-      });
-    }
-  }
+  const derivedCourseboxId = extractCourseboxIdFromLaunchUrl(lmsLaunchUrl);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +109,6 @@ export default function CoursesAdmin({
           description: description.trim() || undefined,
           skills: selectedSkills,
           lmsLaunchUrl: lmsLaunchUrl.trim() || undefined,
-          courseboxCourseId: courseboxCourseId.trim() || undefined,
         }),
       });
       const payload = await response.json();
@@ -229,41 +214,39 @@ export default function CoursesAdmin({
             <input
               type="url"
               value={lmsLaunchUrl}
-              onChange={(e) => handleLaunchUrlChange(e.target.value)}
+              onChange={(e) => setLmsLaunchUrl(e.target.value)}
               placeholder="https://my.coursebox.ai/lti/launch?link=..."
               className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
             />
             <p className="mt-1 text-xs text-slate-500">
               From Coursebox &gt; Course &gt; Publish to LMS &gt; copy the Launch URL.
-              The Coursebox Course ID below auto-fills from this URL.
             </p>
           </div>
 
-          <details className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <summary className="cursor-pointer text-xs font-medium text-slate-600">
-              Advanced — Coursebox Course ID
-              {courseboxCourseId ? (
-                <span className="ml-2 break-all text-emerald-700">
-                  ✓ {courseboxCourseId}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Coursebox Course ID
+            </label>
+            <div className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              {derivedCourseboxId ? (
+                <span className="break-all font-mono text-emerald-700">
+                  {derivedCourseboxId}
+                </span>
+              ) : lmsLaunchUrl ? (
+                <span className="text-amber-700">
+                  Could not extract a course UUID from that URL.
                 </span>
               ) : (
-                <span className="ml-2 text-amber-700">not set</span>
+                <span className="text-slate-400">
+                  Auto-derived from the Coursebox launch URL above.
+                </span>
               )}
-            </summary>
-            <div className="mt-3">
-              <input
-                type="text"
-                value={courseboxCourseId}
-                onChange={(e) => setCourseboxCourseId(e.target.value)}
-                placeholder="auto-filled from launch URL"
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500"
-              />
-              <p className="mt-2 text-xs text-slate-500">
-                Auto-extracted from the launch URL above. Override only if you need
-                a different ID for matching Zapier completion events.
-              </p>
             </div>
-          </details>
+            <p className="mt-1 text-xs text-slate-500">
+              Read-only. Coursebox embeds this UUID inside the launch URL and we use
+              it to match completion events.
+            </p>
+          </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Skills</label>
@@ -356,7 +339,6 @@ export default function CoursesAdmin({
                       setTitle(course.title);
                       setDescription(course.description);
                       setLmsLaunchUrl(course.lmsLaunchUrl);
-                      setCourseboxCourseId(course.courseboxCourseId ?? "");
                       setSelectedSkills(course.skills);
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
