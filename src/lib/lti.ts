@@ -115,6 +115,15 @@ export async function createLtiLaunchToken(input: LtiLaunchTokenInput): Promise<
     "https://purl.imsglobal.org/spec/lti/claim/roles": [
       "http://purl.imsglobal.org/vocab/lis/v2/membership#Learner",
     ],
+    // Standard LTI 1.3 custom claim — tools that surface custom fields on
+    // learner records (and echo them in webhooks) will see these values, so
+    // completion events can match back to our DB candidate without depending
+    // on email-equivalence between platform and tool.
+    "https://purl.imsglobal.org/spec/lti/claim/custom": {
+      platform_candidate_id: input.userId,
+      platform_candidate_email: input.userEmail,
+      platform_course_external_id: input.courseExternalId,
+    },
     name: input.userName,
     email: input.userEmail,
     nonce: input.nonce,

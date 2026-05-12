@@ -15,8 +15,10 @@ const payloadSchema = z
     type: z.string().min(1),
     candidateEmail: z.string().email().optional(),
     courseboxUserId: flexibleString.optional(),
+    platformCandidateId: flexibleString.optional(),
     courseExternalId: flexibleString.optional(),
     courseboxCourseId: flexibleString.optional(),
+    platformCourseExternalId: flexibleString.optional(),
     status: z.enum(["in_progress", "completed"]).default("completed"),
     score: z.union([z.number(), z.string()])
       .transform((v) => (typeof v === "string" ? Number(v) : v))
@@ -24,12 +26,20 @@ const payloadSchema = z
       .optional(),
     completedAt: z.string().optional(),
   })
-  .refine((v) => v.candidateEmail || v.courseboxUserId, {
-    message: "Either candidateEmail or courseboxUserId is required.",
-  })
-  .refine((v) => v.courseExternalId || v.courseboxCourseId, {
-    message: "Either courseExternalId or courseboxCourseId is required.",
-  });
+  .refine(
+    (v) => v.candidateEmail || v.courseboxUserId || v.platformCandidateId,
+    {
+      message:
+        "Need one of candidateEmail / courseboxUserId / platformCandidateId.",
+    },
+  )
+  .refine(
+    (v) => v.courseExternalId || v.courseboxCourseId || v.platformCourseExternalId,
+    {
+      message:
+        "Need one of courseExternalId / courseboxCourseId / platformCourseExternalId.",
+    },
+  );
 
 function authorized(request: NextRequest): boolean {
   const secret = process.env.ZAPIER_WEBHOOK_SECRET;
@@ -67,9 +77,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, idempotent: true });
   }
 
+  // Course match precedence:
+  //   1. platformCourseExternalId — set by us in the LTI custom claim,
+  //      strongest signal that the event is for this exact course in our DB.
+  //   2. courseboxCourseId — Coursebox's own UUID, matches if we've stored it
+  //      on our course (auto-extracted from the launch URL).
+  //   3. courseExternalId — legacy email-style fallback.
+  const courseExternalId =
+    payload.platformCourseExternalId ?? payload.courseExternalId;
   const courseQuery = payload.courseboxCourseId
     ? { courseboxCourseId: payload.courseboxCourseId }
-    : { externalId: payload.courseExternalId! };
+    : { externalId: courseExternalId! };
   const course = await db.collection("courses").findOne(courseQuery);
 
   if (!course) {
@@ -86,9 +104,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, ignored: "course_not_found" });
   }
 
+  // Candidate match precedence:
+  //   1. platformCandidateId — our own Mongo _id passed via the LTI custom
+  //      claim. Strongest signal; no email/account confusion possible.
+  //   2. courseboxUserId — Coursebox's own internal user id, matches once
+  //      we've stored it on the candidate.
+  //   3. candidateEmail — fallback for tools that send the learner's email
+  //      directly. On a successful email match we also opportunistically
+  //      capture the Coursebox user id for future events.
   let candidateId: ObjectId | null = null;
 
-  if (payload.courseboxUserId) {
+  if (payload.platformCandidateId && ObjectId.isValid(payload.platformCandidateId)) {
+    const byPlatformId = await db
+      .collection<Candidate>("candidates")
+      .findOne({ _id: new ObjectId(payload.platformCandidateId) });
+    if (byPlatformId?._id) {
+      candidateId = byPlatformId._id as ObjectId;
+      if (payload.courseboxUserId && !byPlatformId.courseboxUserId) {
+        await db.collection<Candidate>("candidates").updateOne(
+          { _id: byPlatformId._id },
+          { $set: { courseboxUserId: payload.courseboxUserId, updatedAt: new Date() } },
+        );
+      }
+    }
+  }
+
+  if (!candidateId && payload.courseboxUserId) {
     const byUserId = await db
       .collection<Candidate>("candidates")
       .findOne({ courseboxUserId: payload.courseboxUserId });
